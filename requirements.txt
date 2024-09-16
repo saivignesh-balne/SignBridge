@@ -1,6 +1,7 @@
-streamlit==1.24.0
-opencv-python-headless==4.7.0.72
-tensorflow==2.14.0
-cvzone==1.5.0
-numpy==1.25.0
-Pillow==9.5.0
+streamlit
+opencv-python-headless
+tensorflow
+cvzone
+numpy
+Pillow
+pyttsx3
