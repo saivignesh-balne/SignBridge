@@ -3,23 +3,14 @@ import cv2
 import numpy as np
 import tensorflow as tf
 from cvzone.HandTrackingModule import HandDetector
-from gtts import gTTS
-import os
-import tempfile
 import time
+import math
 
 # Load the pre-trained model
 model = tf.keras.models.load_model('model.h5')
 
 # Define class labels according to your model's classes
 class_labels = ['hi', 'i love u', 'yes']
-
-# Function to speak the text
-def speak(text):
-    tts = gTTS(text=text, lang='en')
-    temp_file = tempfile.NamedTemporaryFile(delete=False, suffix='.mp3')
-    tts.save(temp_file.name)
-    os.system(f"mpg321 {temp_file.name}")  # You may need to use `mpg321` or an alternative command
 
 # Initialize the webcam and hand detector
 cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
@@ -78,9 +69,6 @@ while cap.isOpened():
             predicted_class = np.argmax(yhat, axis=1)
             label = class_labels[predicted_class[0]]
 
-            # Speak the prediction
-            speak(label)
-            
             # Reset the timer after prediction
             start_time = None
     
