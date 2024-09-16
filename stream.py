@@ -1,90 +1,132 @@
+import streamlit as st
 import cv2
 import numpy as np
 import tensorflow as tf
 from cvzone.HandTrackingModule import HandDetector
 import math
-import streamlit as st
-from PIL import Image
-import io
+import pyttsx3
+import threading
+import queue
+import time
+
+# Initialize Streamlit
+st.title("Sign Language Recognition")
 
 # Load the pre-trained model
-model = tf.keras.models.load_model('model.h5')  # Change to 'my_model.keras' if needed
+model = tf.keras.models.load_model('Data/model.h5')
 
 # Define class labels according to your model's classes
-class_labels = ['Hi', 'I Love You', 'Yes']
+class_labels = ['hi', 'i love u', 'yes']
 
-# Initialize the hand detector
+# Initialize text-to-speech engine
+engine = pyttsx3.init()
+
+# Queue for text-to-speech
+tts_queue = queue.Queue()
+
+# Timer variables for sign recognition delay
+start_time = None
+recognition_delay = 2  # 2 seconds delay
+
+# Function to speak the text
+def speak(text):
+    tts_queue.put(text)
+
+def text_to_speech_worker():
+    while True:
+        text = tts_queue.get()
+        if text is None:
+            break
+        engine.say(text)
+        engine.runAndWait()
+
+# Start text-to-speech thread
+tts_thread = threading.Thread(target=text_to_speech_worker)
+tts_thread.start()
+
+# Initialize the webcam and hand detector
+cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
 detector = HandDetector(maxHands=1)
 
-# Function to capture frames from the webcam
-def capture_frame():
-    cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
+label = "Waiting..."
+
+# Streamlit layout for the webcam feed
+frame_display = st.empty()
+prediction_display = st.empty()
+
+# Quit flag
+quit_flag = False
+
+# Handle the quit button outside the loop
+if st.button("Quit"):
+    quit_flag = True
+
+while cap.isOpened() and not quit_flag:
     ret, frame = cap.read()
-    cap.release()
-    return frame
 
-# Function to process and predict
-def process_frame(frame):
+    if not ret:
+        st.write("Failed to grab frame")
+        break
+
+    # Detect hands in the frame
     hands, img = detector.findHands(frame)
-    
+
     if hands:
-        hand = hands[0]
-        x, y, w, h = hand['bbox']
+        if start_time is None:
+            start_time = time.time()
 
-        # Create a blank background
-        bg = np.ones((300, 300, 3), np.uint8) * 255
-        imgCrop = frame[y-20:y + h+20, x-20:x + w+20]
+        elapsed_time = time.time() - start_time
 
-        # Resize based on aspect ratio
-        aspectRatio = h / w
-        if aspectRatio > 1:
-            k = 300 / h
-            wCal = math.ceil(k * w)
-            imgResize = cv2.resize(imgCrop, (wCal, 300))
-            wGap = math.ceil((300 - wCal) / 2)
-            bg[:, wGap:wCal + wGap] = imgResize
-        else:
-            k = 300 / w
-            hCal = math.ceil(k * h)
-            imgResize = cv2.resize(imgCrop, (300, hCal))
-            hGap = math.ceil((300 - hCal) / 2)
-            bg[hGap:hCal + hGap, :] = imgResize
+        if elapsed_time >= recognition_delay:
+            hand = hands[0]
+            x, y, w, h = hand['bbox']
 
-        # Preprocess the image for the model
-        img_preprocessed = cv2.resize(bg, (256, 256))
-        img_preprocessed = img_preprocessed.astype(np.float32) / 255.0
-        img_preprocessed = np.expand_dims(img_preprocessed, axis=0)
+            # Create a blank background
+            bg = np.ones((300, 300, 3), np.uint8) * 255
+            imgCrop = frame[y-20:y + h+20, x-20:x + w+20]
 
-        # Make predictions
-        yhat = model.predict(img_preprocessed)
-        predicted_class = np.argmax(yhat, axis=1)
-        label = class_labels[predicted_class[0]]
+            # Resize based on aspect ratio
+            aspectRatio = h / w
+            if aspectRatio > 1:
+                k = 300 / h
+                wCal = math.ceil(k * w)
+                imgResize = cv2.resize(imgCrop, (wCal, 300))
+                wGap = math.ceil((300 - wCal) / 2)
+                bg[:, wGap:wCal + wGap] = imgResize
+            else:
+                k = 300 / w
+                hCal = math.ceil(k * h)
+                imgResize = cv2.resize(imgCrop, (300, hCal))
+                hGap = math.ceil((300 - hCal) / 2)
+                bg[hGap:hCal + hGap, :] = imgResize
+
+            # Preprocess the image for the model
+            img_preprocessed = cv2.resize(bg, (256, 256))
+            img_preprocessed = img_preprocessed.astype(np.float32) / 255.0
+            img_preprocessed = np.expand_dims(img_preprocessed, axis=0)
+
+            # Make predictions
+            yhat = model.predict(img_preprocessed)
+            predicted_class = np.argmax(yhat, axis=1)
+            label = class_labels[predicted_class[0]]
+
+            # Speak the prediction
+            speak(label)
+
+            # Reset the timer after prediction
+            start_time = None
+
     else:
-        label = 'No hand detected'
+        # Reset the timer if no hand is detected
+        start_time = None
 
-    return label, img
+    # Display the result (label) on the Streamlit app
+    prediction_display.text(f"Prediction: {label}")
 
-# Streamlit app
-st.title('Real-Time Hand Gesture Classification')
+    # Show the main camera feed using Streamlit
+    frame_display.image(frame, channels="BGR")
 
-# Capture frame from webcam
-frame = capture_frame()
-
-# Process the frame
-label, processed_frame = process_frame(frame)
-
-# Convert the frame to a format suitable for Streamlit
-def convert_to_streamlit_image(frame):
-    _, buffer = cv2.imencode('.jpg', frame)
-    return buffer.tobytes()
-
-# Display the result
-st.image(convert_to_streamlit_image(processed_frame), caption='Hand Gesture', channels='BGR')
-st.write(f'Prediction: {label}')
-
-if st.button('Refresh'):
-    # Refresh the frame
-    frame = capture_frame()
-    label, processed_frame = process_frame(frame)
-    st.image(convert_to_streamlit_image(processed_frame), caption='Hand Gesture', channels='BGR')
-    st.write(f'Prediction: {label}')
+# Release the capture and stop the TTS thread
+cap.release()
+tts_queue.put(None)
+tts_thread.join()
