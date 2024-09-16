@@ -1,8 +1,6 @@
-streamlit
-opencv-python-headless
-tensorflow
-cvzone
+streamlit==1.38.0
+opencv-python==4.5.3.56
+tensorflow==2.6.0  # Or your TensorFlow version
+cvzone==1.5.2
 numpy
-Pillow
 pyttsx3
-opencv
