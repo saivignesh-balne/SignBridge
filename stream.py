@@ -9,7 +9,7 @@ import tempfile
 import time
 
 # Load the pre-trained model
-model = tf.keras.models.load_model('Data/model.h5')
+model = tf.keras.models.load_model('model.h5')
 
 # Define class labels according to your model's classes
 class_labels = ['hi', 'i love u', 'yes']
