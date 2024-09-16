@@ -7,3 +7,4 @@ pyttsx3
 six>=1.15.0
 setuptools>=65.0.0
 pip>=24.2
+mediapipe
