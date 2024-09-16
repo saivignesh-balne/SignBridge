@@ -3,67 +3,35 @@ import cv2
 import numpy as np
 import tensorflow as tf
 from cvzone.HandTrackingModule import HandDetector
-import math
-import pyttsx3
-import threading
-import queue
+from gtts import gTTS
+import os
+import tempfile
 import time
 
-# Initialize Streamlit
-st.title("Sign Language Recognition")
-
 # Load the pre-trained model
-model = tf.keras.models.load_model('model.h5')
+model = tf.keras.models.load_model('Data/model.h5')
 
 # Define class labels according to your model's classes
 class_labels = ['hi', 'i love u', 'yes']
 
-# Initialize text-to-speech engine
-engine = pyttsx3.init()
-
-# Queue for text-to-speech
-tts_queue = queue.Queue()
-
-# Timer variables for sign recognition delay
-start_time = None
-recognition_delay = 2  # 2 seconds delay
-
 # Function to speak the text
 def speak(text):
-    tts_queue.put(text)
-
-def text_to_speech_worker():
-    while True:
-        text = tts_queue.get()
-        if text is None:
-            break
-        engine.say(text)
-        engine.runAndWait()
-
-# Start text-to-speech thread
-tts_thread = threading.Thread(target=text_to_speech_worker)
-tts_thread.start()
+    tts = gTTS(text=text, lang='en')
+    temp_file = tempfile.NamedTemporaryFile(delete=False, suffix='.mp3')
+    tts.save(temp_file.name)
+    os.system(f"mpg321 {temp_file.name}")  # You may need to use `mpg321` or an alternative command
 
 # Initialize the webcam and hand detector
 cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
 detector = HandDetector(maxHands=1)
 
 label = "Waiting..."
+start_time = None
+recognition_delay = 2  # 2 seconds delay
 
-# Streamlit layout for the webcam feed
-frame_display = st.empty()
-prediction_display = st.empty()
-
-# Quit flag
-quit_flag = False
-
-# Handle the quit button outside the loop
-if st.button("Quit"):
-    quit_flag = True
-
-while cap.isOpened() and not quit_flag:
+while cap.isOpened():
     ret, frame = cap.read()
-
+    
     if not ret:
         st.write("Failed to grab frame")
         break
@@ -112,21 +80,24 @@ while cap.isOpened() and not quit_flag:
 
             # Speak the prediction
             speak(label)
-
+            
             # Reset the timer after prediction
             start_time = None
-
+    
     else:
         # Reset the timer if no hand is detected
         start_time = None
+    
+    # Display the result (label) on the frame, always visible
+    cv2.putText(frame, f'Prediction: {label}', (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2, cv2.LINE_AA)
 
-    # Display the result (label) on the Streamlit app
-    prediction_display.text(f"Prediction: {label}")
+    # Show the main camera feed
+    cv2.imshow("Camera", frame)
 
-    # Show the main camera feed using Streamlit
-    frame_display.image(frame, channels="BGR")
+    # Break the loop if 'q' is pressed
+    if cv2.waitKey(1) & 0xFF == ord('q'):
+        break
 
-# Release the capture and stop the TTS thread
+# Release the capture and close windows
 cap.release()
-tts_queue.put(None)
-tts_thread.join()
+cv2.destroyAllWindows()
