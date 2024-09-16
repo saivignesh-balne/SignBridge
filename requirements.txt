@@ -1,6 +1,9 @@
 streamlit==1.38.0
-opencv-python==4.5.3.56
-tensorflow==2.6.0  # Or your TensorFlow version
+opencv-python
+tensorflow==2.6.0
 cvzone==1.5.2
 numpy
 pyttsx3
+six>=1.15.0
+setuptools>=65.0.0
+pip>=24.2
