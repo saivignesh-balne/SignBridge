@@ -1,6 +1,6 @@
 streamlit==1.38.0
 opencv-python
-tensorflow==2.6.0
+tensorflow==2.17.0
 cvzone==1.5.2
 numpy
 pyttsx3
