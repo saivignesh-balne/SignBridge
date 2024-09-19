@@ -51,7 +51,7 @@ start_button = st.button('Start Webcam')
 stop_button = st.button('Stop Webcam')
 
 if start_button and not st.session_state.webcam_running:
-    st.session_state.cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
+    st.session_state.cap = cv2.VideoCapture(0)
     if st.session_state.cap.isOpened():
         st.session_state.webcam_running = True
     else:
