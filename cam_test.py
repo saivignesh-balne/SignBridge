@@ -3,25 +3,14 @@ import streamlit as st
 
 st.title('Webcam Test')
 
-# Create a VideoCapture object
-cap = cv2.VideoCapture(0)
-
-if not cap.isOpened():
-    st.error('Failed to open webcam')
-else:
-    st.write('Webcam is open')
-
-    # Capture frames from the webcam
-    while True:
+for index in range(5):  # Try multiple indexes
+    cap = cv2.VideoCapture(index)
+    if cap.isOpened():
+        st.write(f"Camera {index} is available.")
         ret, frame = cap.read()
-        if not ret:
-            st.error('Failed to capture image')
-            break
-
-        st.image(frame, channels='BGR', use_column_width=True)
-
-        if st.button('Stop'):
-            break
-
-    cap.release()
-    cv2.destroyAllWindows()
+        if ret:
+            st.image(frame, channels='BGR', use_column_width=True)
+        cap.release()
+        break
+    else:
+        st.error(f"Camera {index} is not available.")
