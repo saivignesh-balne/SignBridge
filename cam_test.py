@@ -1,27 +1,39 @@
+import streamlit as st
 import cv2
 
-def test_webcam(index=0):
-    cap = cv2.VideoCapture(index, cv2.CAP_DSHOW)
+def main():
+    st.title("Webcam Test")
 
-    if not cap.isOpened():
-        print("Failed to open webcam at index", index)
-        return
+    # Button to start webcam
+    if st.button("Start Webcam"):
+        # Initialize the webcam
+        cap = cv2.VideoCapture(0)
 
-    print("Webcam is open at index", index)
+        if not cap.isOpened():
+            st.error("Failed to open webcam")
+            return
 
-    while True:
-        ret, frame = cap.read()
-        if not ret:
-            print("Failed to grab frame")
-            break
+        st.write("Webcam is running. Click 'Stop Webcam' to stop.")
 
-        cv2.imshow('Webcam Feed', frame)
+        # Placeholder for video feed
+        frame_placeholder = st.empty()
 
-        if cv2.waitKey(1) & 0xFF == ord('q'):
-            break
+        while True:
+            ret, frame = cap.read()
 
-    cap.release()
-    cv2.destroyAllWindows()
+            if not ret:
+                st.error("Failed to grab frame")
+                break
+
+            # Display the video feed
+            frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            frame_placeholder.image(frame_rgb, channels="RGB")
+
+            # Stop button to break the loop and release the camera
+            if st.button("Stop Webcam"):
+                break
+
+        cap.release()
 
 if __name__ == "__main__":
-    test_webcam()
+    main()
