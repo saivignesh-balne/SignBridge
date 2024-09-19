@@ -6,4 +6,4 @@ numpy
 gtts
 deep-translator
 mediapipe
-streamlit_webrtc
+streamlit-webrtc
