@@ -34,7 +34,7 @@ if 'video_file' not in st.session_state:
 if 'cap' not in st.session_state:
     st.session_state.cap = None
 if 'model' not in st.session_state:
-    st.session_state.model = tf.keras.models.load_model('Data/model.h5')
+    st.session_state.model = tf.keras.models.load_model('model.h5')
     st.session_state.class_labels = ['hi', 'i love u', 'yes']
 
 if 'detector' not in st.session_state:
@@ -89,7 +89,7 @@ if uploaded_file is not None:
 
     # Timer variables for sign recognition delay
     start_time = None
-    recognition_delay = 0  # 2 seconds delay
+    recognition_delay = 1  # 2 seconds delay
 
     while True:
         ret, frame = st.session_state.cap.read()
