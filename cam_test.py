@@ -11,14 +11,17 @@ if not cap.isOpened():
 else:
     st.write('Webcam is open')
 
-# Read and display video frames
-while True:
-    ret, frame = cap.read()
-    if not ret:
-        break
-    st.image(frame, channels='BGR', use_column_width=True)
-    if st.button('Stop'):
-        break
+    # Capture frames from the webcam
+    while True:
+        ret, frame = cap.read()
+        if not ret:
+            st.error('Failed to capture image')
+            break
 
-cap.release()
-cv2.destroyAllWindows()
+        st.image(frame, channels='BGR', use_column_width=True)
+
+        if st.button('Stop'):
+            break
+
+    cap.release()
+    cv2.destroyAllWindows()
