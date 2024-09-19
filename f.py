@@ -97,12 +97,14 @@ if st.session_state.webcam_running:
     start_time = None
     recognition_delay = 2  # 2 seconds delay
 
-    ret, frame = st.session_state.cap.read()
-    
-    if not ret:
-        st.error("Failed to grab frame")
-        st.session_state.webcam_running = False
-    else:
+    while st.session_state.webcam_running:
+        ret, frame = st.session_state.cap.read()
+        
+        if not ret:
+            st.error("Failed to grab frame")
+            st.session_state.webcam_running = False
+            break
+
         # Detect hands in the frame
         hands, img = st.session_state.detector.findHands(frame)
 
