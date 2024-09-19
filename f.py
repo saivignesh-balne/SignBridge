@@ -33,7 +33,7 @@ if 'cap' not in st.session_state:
     st.session_state.cap = None
 if 'model' not in st.session_state:
     try:
-        st.session_state.model = tf.keras.models.load_model('model.h5')
+        st.session_state.model = tf.keras.models.load_model('Data/model.h5')
         st.session_state.class_labels = ['hi', 'i love u', 'yes']
     except Exception as e:
         st.error(f"Error loading model: {e}")
@@ -97,14 +97,12 @@ if st.session_state.webcam_running:
     start_time = None
     recognition_delay = 2  # 2 seconds delay
 
-    while st.session_state.webcam_running:
-        ret, frame = st.session_state.cap.read()
-        
-        if not ret:
-            st.error("Failed to grab frame")
-            st.session_state.webcam_running = False
-            break
-
+    ret, frame = st.session_state.cap.read()
+    
+    if not ret:
+        st.error("Failed to grab frame")
+        st.session_state.webcam_running = False
+    else:
         # Detect hands in the frame
         hands, img = st.session_state.detector.findHands(frame)
 
