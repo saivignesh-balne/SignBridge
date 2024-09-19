@@ -1,11 +1,27 @@
 import streamlit as st
+import cv2
 
-st.title("Webcam Example")
+def main():
+    st.title("Test Webcam")
 
-# Use Streamlit's camera input component
-camera_input = st.camera_input("Capture an image")
+    # Button to start webcam
+    if st.button("Start Webcam"):
+        cap = cv2.VideoCapture(0)
+        if not cap.isOpened():
+            st.error("Failed to open webcam")
+            return
 
-if camera_input:
-    st.image(camera_input)
-else:
-    st.write("No image captured yet.")
+        st.write("Webcam is running")
+
+        while True:
+            ret, frame = cap.read()
+            if not ret:
+                st.error("Failed to grab frame")
+                break
+
+            st.image(frame, channels="BGR")
+
+        cap.release()
+
+if __name__ == "__main__":
+    main()
