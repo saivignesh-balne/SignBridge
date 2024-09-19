@@ -36,7 +36,7 @@ if 'image_file' not in st.session_state:
 if 'cap' not in st.session_state:
     st.session_state.cap = None
 if 'model' not in st.session_state:
-    st.session_state.model = tf.keras.models.load_model('Data/model.h5')
+    st.session_state.model = tf.keras.models.load_model('model.h5')
     st.session_state.class_labels = ['hi', 'i love u', 'yes']
 if 'detector' not in st.session_state:
     st.session_state.detector = HandDetector(maxHands=2)
