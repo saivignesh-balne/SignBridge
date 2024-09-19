@@ -1,42 +1,58 @@
 import streamlit as st
-from streamlit_webrtc import webrtc_streamer, VideoProcessorBase
-import cv2
-import numpy as np
-
-# Define a video processor class
-class VideoProcessor(VideoProcessorBase):
-    def __init__(self):
-        # OpenCV video capture object
-        self.cap = cv2.VideoCapture(0)
-
-    def recv(self, frame):
-        # Capture a frame from the OpenCV video capture object
-        ret, img = self.cap.read()
-        if not ret:
-            return frame
-
-        # Convert the frame to the format required by streamlit-webrtc
-        img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-        frame = np.array(img)
-        return frame
-
-    def __del__(self):
-        # Release the video capture object
-        if self.cap is not None:
-            self.cap.release()
+import tempfile
+import base64
 
 # Streamlit app
-st.title("Webcam Stream with OpenCV and streamlit-webrtc")
+st.title("Video Recording in Streamlit")
 
-# Use webrtc_streamer to stream the video
-webrtc_ctx = webrtc_streamer(
-    key="example",
-    video_processor_factory=VideoProcessor,
-    async_mode=True
-)
+# JavaScript code to handle video recording
+video_recorder_js = """
+<script>
+let mediaRecorder;
+let recordedChunks = [];
 
-# Optionally display some information about the stream
-if webrtc_ctx.video_processor:
-    st.write("Webcam is active.")
-else:
-    st.write("Webcam is not active.")
+async function startRecording() {
+    const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+    const video = document.querySelector("video");
+    video.srcObject = stream;
+    video.play();
+    
+    mediaRecorder = new MediaRecorder(stream);
+    mediaRecorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+            recordedChunks.push(event.data);
+        }
+    };
+    mediaRecorder.onstop = () => {
+        const blob = new Blob(recordedChunks, { type: 'video/webm' });
+        const url = URL.createObjectURL(blob);
+        const downloadLink = document.createElement('a');
+        downloadLink.href = url;
+        downloadLink.download = 'recording.webm';
+        document.body.appendChild(downloadLink);
+        downloadLink.click();
+        document.body.removeChild(downloadLink);
+    };
+    mediaRecorder.start();
+}
+
+function stopRecording() {
+    mediaRecorder.stop();
+}
+</script>
+"""
+
+# Display video element and controls for recording
+st.markdown("""
+<video style="width: 100%;" autoplay></video>
+<button onclick="startRecording()">Start Recording</button>
+<button onclick="stopRecording()">Stop Recording</button>
+""", unsafe_allow_html=True)
+
+# Inject JavaScript code into the Streamlit app
+st.components.v1.html(video_recorder_js, height=100)
+
+# Optionally handle video file upload if needed
+uploaded_file = st.file_uploader("Upload your recorded video", type=["webm"])
+if uploaded_file:
+    st.video(uploaded_file)
