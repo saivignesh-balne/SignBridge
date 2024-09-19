@@ -1,12 +1,13 @@
 import cv2
 
-# Open the webcam
-cap = cv2.VideoCapture(0,cv2.CAP_DSHOW)
+def test_webcam(index=0):
+    cap = cv2.VideoCapture(index, cv2.CAP_DSHOW)
 
-if not cap.isOpened():
-    print("Failed to open webcam")
-else:
-    print("Webcam is open")
+    if not cap.isOpened():
+        print("Failed to open webcam at index", index)
+        return
+
+    print("Webcam is open at index", index)
 
     while True:
         ret, frame = cap.read()
@@ -21,3 +22,6 @@ else:
 
     cap.release()
     cv2.destroyAllWindows()
+
+if __name__ == "__main__":
+    test_webcam()
