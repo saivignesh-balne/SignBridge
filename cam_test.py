@@ -9,6 +9,7 @@ from gtts import gTTS
 from deep_translator import GoogleTranslator
 from io import BytesIO
 import base64
+import tempfile
 
 # Supported Indian languages with their codes for gTTS and deep-translator
 languages = {
@@ -33,7 +34,7 @@ if 'cap' not in st.session_state:
     st.session_state.cap = None
 if 'model' not in st.session_state:
     try:
-        st.session_state.model = tf.keras.models.load_model('model.h5')
+        st.session_state.model = tf.keras.models.load_model('Data/model.h5')
         st.session_state.class_labels = ['hi', 'i love u', 'yes']
     except Exception as e:
         st.error(f"Error loading model: {e}")
@@ -79,8 +80,13 @@ def play_audio(text, lang_code):
     st.components.v1.html(audio_html, height=0)
 
 if uploaded_file is not None:
-    # Initialize video capture from uploaded file
-    st.session_state.cap = cv2.VideoCapture(uploaded_file)
+    # Save the uploaded file to a temporary file
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".mp4") as temp_file:
+        temp_file.write(uploaded_file.read())
+        temp_file_path = temp_file.name
+
+    # Initialize video capture from the temporary file
+    st.session_state.cap = cv2.VideoCapture(temp_file_path)
 
     # Timer variables for sign recognition delay
     start_time = None
