@@ -10,6 +10,7 @@ from deep_translator import GoogleTranslator
 from io import BytesIO
 import base64
 import tempfile
+import threading
 
 # Supported Indian languages with their codes for gTTS and deep-translator
 languages = {
@@ -34,7 +35,7 @@ if 'cap' not in st.session_state:
     st.session_state.cap = None
 if 'model' not in st.session_state:
     try:
-        st.session_state.model = tf.keras.models.load_model('model.h5')
+        st.session_state.model = tf.keras.models.load_model('Data/model.h5')
         st.session_state.class_labels = ['hi', 'i love u', 'yes']
     except Exception as e:
         st.error(f"Error loading model: {e}")
@@ -53,7 +54,6 @@ uploaded_file = st.file_uploader("Upload a video file", type=["mp4", "avi", "mov
 # Display for video feed and prediction
 frame_placeholder = st.empty()
 label_placeholder = st.empty()
-translation_placeholder = st.empty()
 
 def play_audio(text, lang_code):
     # Translate the text
@@ -80,7 +80,7 @@ def play_audio(text, lang_code):
     # Render the HTML audio player with autoplay
     st.components.v1.html(audio_html, height=0)
 
-def process_frame(frame, detector, model, class_labels, lang_code):
+def handle_predictions_and_audio(frame, detector, model, class_labels, lang_code):
     # Detect hands in the frame
     hands, img = detector.findHands(frame)
 
@@ -152,19 +152,17 @@ if uploaded_file is not None:
             st.text("End of video or failed to grab frame.")
             break
 
-        # Process frame and get the label
-        label = process_frame(frame, st.session_state.detector, st.session_state.model, st.session_state.class_labels, lang_code)
+        # Use threading to handle predictions and audio
+        prediction_thread = threading.Thread(
+            target=lambda: handle_predictions_and_audio(frame, st.session_state.detector, st.session_state.model, st.session_state.class_labels, lang_code)
+        )
+        prediction_thread.start()
+        prediction_thread.join()
 
         # Update the Streamlit display
         frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         frame_placeholder.image(frame_rgb, channels="RGB")
-        label_placeholder.text(f'Prediction: {label}')
-
-        # Update translation if necessary
-        if label != st.session_state.last_label:
-            translated_text = GoogleTranslator(source='en', target=lang_code).translate(label)
-            translation_placeholder.text(f'Translation: {translated_text}')
-            st.session_state.last_label = label
+        label_placeholder.text(f'Prediction: {st.session_state.last_label}')
 
     st.session_state.cap.release()
 else:
