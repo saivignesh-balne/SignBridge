@@ -13,6 +13,7 @@ import tempfile
 
 # Supported Indian languages with their codes for gTTS and deep-translator
 languages = {
+    'English': 'en',
     'Hindi': 'hi',
     'Tamil': 'ta',
     'Telugu': 'te',
@@ -33,11 +34,9 @@ if 'video_file' not in st.session_state:
 if 'cap' not in st.session_state:
     st.session_state.cap = None
 if 'model' not in st.session_state:
-    try:
-        st.session_state.model = tf.keras.models.load_model('Data/model.h5')
-        st.session_state.class_labels = ['hi', 'i love u', 'yes']
-    except Exception as e:
-        st.error(f"Error loading model: {e}")
+    st.session_state.model = tf.keras.models.load_model('Data/model.h5')
+    st.session_state.class_labels = ['hi', 'i love u', 'yes']
+
 if 'detector' not in st.session_state:
     st.session_state.detector = HandDetector(maxHands=2)
 if 'last_label' not in st.session_state:
@@ -90,7 +89,7 @@ if uploaded_file is not None:
 
     # Timer variables for sign recognition delay
     start_time = None
-    recognition_delay = 2  # 2 seconds delay
+    recognition_delay = 0  # 2 seconds delay
 
     while True:
         ret, frame = st.session_state.cap.read()
