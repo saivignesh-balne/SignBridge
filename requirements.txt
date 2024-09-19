@@ -1,11 +1,7 @@
-streamlit==1.38.0
-opencv-python==4.10.0.84
-tensorflow==2.17.0
-cvzone==1.5.2
+streamlit
+opencv-python-headless
+tensorflow
+cvzone
 numpy
-pyttsx3
-six>=1.15.0
-setuptools>=65.0.0
-pip>=24.2
-mediapipe==0.10.15
 gtts
+deep-translator
