@@ -72,10 +72,15 @@ def main():
             audio_bytes = audio_buffer.read()
             audio_b64 = base64.b64encode(audio_bytes).decode()
             audio_html = f"""
-                <audio autoplay controls>
-                    <source src="data:audio/mp3;base64,{audio_b64}" type="audio/mp3">
-                </audio>
-            """
+                            <audio autoplay>
+                                <source src="data:audio/mp3;base64,{audio_b64}" type="audio/mp3">
+                            </audio>
+                            <style>
+                                audio {{
+                                    display: none;
+                                }}
+                            </style>
+                        """
             
             # Render the HTML audio player with autoplay
             st.components.v1.html(audio_html, height=50)
