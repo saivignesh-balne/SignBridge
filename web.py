@@ -86,7 +86,7 @@ class VideoTransformer(VideoProcessorBase):
         self.class_labels = st.session_state.class_labels
         self.last_label = st.session_state.last_label
         self.start_time = None
-        self.recognition_delay = 2
+        self.recognition_delay = 1.5
 
     def transform(self, frame):
         image = frame.to_ndarray(format="bgr24")
