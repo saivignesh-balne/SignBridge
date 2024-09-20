@@ -1,6 +1,7 @@
 import av
 import cv2
 import streamlit as st
+from cvzone.HandTrackingModule import HandDetector
 from streamlit_webrtc import webrtc_streamer
 
 st.title("Computer Vision Streamlit Application")
@@ -8,10 +9,10 @@ st.title("Computer Vision Streamlit Application")
 # Define the video processor class
 class VideoProcessor:
     def recv(self, frame):
-        image = frame.to_ndarray(format="bgr24")
-        # Apply Canny edge detection and convert to BGR
-        image = cv2.cvtColor(cv2.Canny(image, 100, 200), cv2.COLOR_GRAY2BGR)
-        return av.VideoFrame.from_ndarray(image, format="bgr24")
+        hands, img = detector.findHands(frame)
+    if hands:
+        hand = hands[0]
+        x,y,w,h = hand['bbox']
 
 # Adding STUN server configuration
 RTC_CONFIGURATION = {
