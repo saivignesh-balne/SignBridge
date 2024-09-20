@@ -7,3 +7,4 @@ gtts
 deep-translator
 mediapipe
 streamlit-webrtc
+aioice
