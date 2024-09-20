@@ -10,7 +10,7 @@ from deep_translator import GoogleTranslator
 from io import BytesIO
 import base64
 import threading
-from streamlit_webrtc import webrtc_streamer, VideoTransformerBase
+from streamlit_webrtc import webrtc_streamer, VideoProcessorBase
 
 # Supported Indian languages with their codes for gTTS and deep-translator
 languages = {
@@ -32,7 +32,8 @@ st.title("Sign Language Recognition with Translation and Speech")
 # Initialize session state variables
 if 'model' not in st.session_state:
     try:
-        st.session_state.model = tf.keras.models.load_model('model.h5')
+        st.session_state.model = tf.keras.models.load_model('Data/model.h5')
+        st.session_state.model.compile()  # Explicitly compile the model
         st.session_state.class_labels = ['hi', 'i love u', 'yes']
     except Exception as e:
         st.error(f"Error loading model: {e}")
@@ -69,12 +70,13 @@ def play_audio(text, lang_code):
 def play_audio_thread(label, lang_code):
     threading.Thread(target=play_audio, args=(label, lang_code)).start()
 
-class VideoTransformer(VideoTransformerBase):
+class VideoTransformer(VideoProcessorBase):
     def __init__(self):
         if 'detector' not in st.session_state:
             st.session_state.detector = HandDetector(maxHands=2)
         if 'model' not in st.session_state:
             st.session_state.model = tf.keras.models.load_model('Data/model.h5')
+            st.session_state.model.compile()  # Explicitly compile the model
             st.session_state.class_labels = ['hi', 'i love u', 'yes']
         if 'last_label' not in st.session_state:
             st.session_state.last_label = "No Hand Detected"
@@ -152,8 +154,8 @@ class VideoTransformer(VideoTransformerBase):
 
         return image
 
-# Initialize WebRTC streamer
+# Initialize WebRTC streamer with the updated argument
 webrtc_streamer(
     key="sign-language-recognition",
-    video_transformer_factory=VideoTransformer
+    video_processor_factory=VideoTransformer
 )
