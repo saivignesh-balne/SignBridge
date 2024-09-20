@@ -1,7 +1,6 @@
 import streamlit as st
+from streamlit_webrtc import webrtc_streamer, VideoTransformerBase
 import cv2
-import numpy as np
-from streamlit_webrtc import VideoTransformerBase, webrtc_streamer
 
 # Define a VideoTransformer class to process frames
 class VideoTransformer(VideoTransformerBase):
@@ -21,11 +20,10 @@ class VideoTransformer(VideoTransformerBase):
 def main():
     st.title("WebRTC Streamlit Example")
 
-    # WeRTC streamer widget with updated API
+    # Use the updated webrtc_streamer API
     webrtc_streamer(
         key="example",
-        video_transformer_factory=lambda: VideoTransformer(),
-        # Add more parameters if needed
+        video_transformer_factory=VideoTransformer
     )
 
 if __name__ == "__main__":
