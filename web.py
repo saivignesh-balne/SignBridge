@@ -75,7 +75,7 @@ class VideoTransformer(VideoProcessorBase):
         if 'detector' not in st.session_state:
             st.session_state.detector = HandDetector(maxHands=2)
         if 'model' not in st.session_state:
-            st.session_state.model = tf.keras.models.load_model('Data/model.h5')
+            st.session_state.model = tf.keras.models.load_model('model.h5')
             st.session_state.model.compile()  # Explicitly compile the model
             st.session_state.class_labels = ['hi', 'i love u', 'yes']
         if 'last_label' not in st.session_state:
