@@ -29,22 +29,7 @@ languages = {
 # Streamlit app title
 st.title("Sign Language Recognition with Translation and Speech")
 
-# Initialize session state variables
-if 'model' not in st.session_state:
-    try:
-        st.session_state.model = tf.keras.models.load_model('model.h5')
-        st.session_state.model.compile()  # Explicitly compile the model
-        st.session_state.class_labels = ['hi', 'i love u', 'yes']
-    except Exception as e:
-        st.error(f"Error loading model: {e}")
-
-if 'detector' not in st.session_state:
-    st.session_state.detector = HandDetector(maxHands=2)
-
-if 'last_label' not in st.session_state:
-    st.session_state.last_label = "No Hand Detected"
-
-# User input for text and language selection
+# User input for language selection
 language = st.selectbox("Select a target language for speech:", list(languages.keys()))
 lang_code = languages[language]
 
@@ -52,7 +37,7 @@ lang_code = languages[language]
 def play_audio(text, lang_code):
     translated_text = GoogleTranslator(source='en', target=lang_code).translate(text)
     st.write(f"Translated Text: {translated_text}")
-    
+
     tts = gTTS(translated_text, lang=lang_code)
     audio_buffer = BytesIO()
     tts.write_to_fp(audio_buffer)
@@ -67,17 +52,20 @@ def play_audio(text, lang_code):
     """
     st.components.v1.html(audio_html, height=0)
 
-def play_audio_thread(label, lang_code):
-    threading.Thread(target=play_audio, args=(label, lang_code)).start()
-
 class VideoTransformer(VideoProcessorBase):
     def __init__(self):
+        # Initialize session state variables inside the class
+        if 'model' not in st.session_state:
+            try:
+                st.session_state.model = tf.keras.models.load_model('model.h5')
+                st.session_state.model.compile()  # Explicitly compile the model
+                st.session_state.class_labels = ['hi', 'i love u', 'yes']
+            except Exception as e:
+                st.error(f"Error loading model: {e}")
+
         if 'detector' not in st.session_state:
             st.session_state.detector = HandDetector(maxHands=2)
-        if 'model' not in st.session_state:
-            st.session_state.model = tf.keras.models.load_model('model.h5')
-            st.session_state.model.compile()  # Explicitly compile the model
-            st.session_state.class_labels = ['hi', 'i love u', 'yes']
+
         if 'last_label' not in st.session_state:
             st.session_state.last_label = "No Hand Detected"
 
@@ -90,13 +78,12 @@ class VideoTransformer(VideoProcessorBase):
 
     def transform(self, frame):
         image = frame.to_ndarray(format="bgr24")
-        
         hands, img = self.detector.findHands(image)
 
         if hands:
             if self.start_time is None:
                 self.start_time = time.time()
-            
+
             elapsed_time = time.time() - self.start_time
 
             if elapsed_time >= self.recognition_delay:
@@ -143,10 +130,10 @@ class VideoTransformer(VideoProcessorBase):
                 predicted_class = np.argmax(yhat, axis=1)
                 label = self.class_labels[predicted_class[0]]
 
-                self.last_label = label
-
-                # Speak the label
-                play_audio_thread(label, lang_code)
+                if label != self.last_label:
+                    self.last_label = label
+                    # Speak the new label
+                    play_audio(label, lang_code)
                 
                 self.start_time = None
             else:
