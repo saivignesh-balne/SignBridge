@@ -21,8 +21,12 @@ class VideoTransformer(VideoTransformerBase):
 def main():
     st.title("WebRTC Streamlit Example")
 
-    # WeRTC streamer widget
-    webrtc_streamer(key="example", video_transformer_factory=VideoTransformer)
+    # WeRTC streamer widget with updated API
+    webrtc_streamer(
+        key="example",
+        video_transformer_factory=lambda: VideoTransformer(),
+        # Add more parameters if needed
+    )
 
 if __name__ == "__main__":
     main()
