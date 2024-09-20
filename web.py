@@ -1,10 +1,10 @@
 import streamlit as st
-from streamlit_webrtc import VideoTransformerBase, webrtc_streamer
+from streamlit_webrtc import VideoProcessorBase, webrtc_streamer
 import cv2
 from cvzone.HandTrackingModule import HandDetector
 
-# Define the video transformer class
-class VideoTransformer(VideoTransformerBase):
+# Define the video processor class
+class VideoProcessor(VideoProcessorBase):
     def __init__(self):
         self.detector = HandDetector(detectionCon=0.7, maxHands=2)
 
@@ -37,4 +37,4 @@ class VideoTransformer(VideoTransformerBase):
 st.title("Hand Detection with Streamlit and CVZone")
 
 # Set up the webrtc stream
-webrtc_streamer(key="example", video_transformer_factory=VideoTransformer)
+webrtc_streamer(key="example", video_processor_factory=VideoProcessor)
