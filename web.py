@@ -1,40 +1,28 @@
 import streamlit as st
-from streamlit_webrtc import VideoProcessorBase, webrtc_streamer
 import cv2
-from cvzone.HandTrackingModule import HandDetector
+import numpy as np
+from streamlit_webrtc import VideoTransformerBase, webrtc_streamer
 
-# Define the video processor class
-class VideoProcessor(VideoProcessorBase):
+# Define a VideoTransformer class to process frames
+class VideoTransformer(VideoTransformerBase):
     def __init__(self):
-        self.detector = HandDetector(detectionCon=0.7, maxHands=2)
+        self.frame_count = 0
 
     def transform(self, frame):
-        # Convert the frame to RGB
         img = frame.to_ndarray(format="bgr24")
 
-        # Flip the image for a later selfie-view display
-        img = cv2.flip(img, 1)
+        # Example processing: Convert frame to grayscale
+        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+        color_frame = cv2.cvtColor(gray, cv2.COLOR_GRAY2BGR)
 
-        # Detect hands
-        hands, img = self.detector.findHands(img, flipType=False)
+        return color_frame
 
-        # Draw results
-        if hands:
-            for hand in hands:
-                lmList = hand['lmList']
-                bbox = hand['bbox']
-                center = hand['center']
-                handType = hand['type']
+# Streamlit app
+def main():
+    st.title("WebRTC Streamlit Example")
 
-                # Draw the bounding box and landmarks
-                cv2.rectangle(img, (bbox[0], bbox[1]), (bbox[2], bbox[3]), (0, 255, 0), 2)
-                for lm in lmList:
-                    cv2.circle(img, (lm[0], lm[1]), 5, (255, 0, 0), cv2.FILLED)
+    # WeRTC streamer widget
+    webrtc_streamer(key="example", video_transformer_factory=VideoTransformer)
 
-        return img
-
-# Create a Streamlit app
-st.title("Hand Detection with Streamlit and CVZone")
-
-# Set up the webrtc stream
-webrtc_streamer(key="example", video_processor_factory=VideoProcessor)
+if __name__ == "__main__":
+    main()
