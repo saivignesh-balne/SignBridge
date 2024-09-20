@@ -10,7 +10,7 @@ from deep_translator import GoogleTranslator
 from io import BytesIO
 import base64
 import threading
-from streamlit_webrtc import webrtc_streamer, VideoProcessorBase
+from streamlit_webrtc import webrtc_streamer, VideoProcessorBase, WebRtcMode
 
 # Supported Indian languages with their codes for gTTS and deep-translator
 languages = {
