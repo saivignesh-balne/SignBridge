@@ -32,7 +32,7 @@ st.title("Sign Language Recognition with Translation and Speech")
 # Initialize session state variables
 if 'model' not in st.session_state:
     try:
-        st.session_state.model = tf.keras.models.load_model('model.h5')
+        st.session_state.model = tf.keras.models.load_model('Data/model.h5')
         st.session_state.class_labels = ['hi', 'i love u', 'yes']
     except Exception as e:
         st.error(f"Error loading model: {e}")
@@ -71,6 +71,14 @@ def play_audio_thread(label, lang_code):
 
 class VideoTransformer(VideoTransformerBase):
     def __init__(self):
+        if 'detector' not in st.session_state:
+            st.session_state.detector = HandDetector(maxHands=2)
+        if 'model' not in st.session_state:
+            st.session_state.model = tf.keras.models.load_model('Data/model.h5')
+            st.session_state.class_labels = ['hi', 'i love u', 'yes']
+        if 'last_label' not in st.session_state:
+            st.session_state.last_label = "No Hand Detected"
+
         self.detector = st.session_state.detector
         self.model = st.session_state.model
         self.class_labels = st.session_state.class_labels
@@ -79,10 +87,8 @@ class VideoTransformer(VideoTransformerBase):
         self.recognition_delay = 2
 
     def transform(self, frame):
-        # Convert the frame to a numpy array (OpenCV format)
         image = frame.to_ndarray(format="bgr24")
         
-        # Detect hands in the frame
         hands, img = self.detector.findHands(image)
 
         if hands:
