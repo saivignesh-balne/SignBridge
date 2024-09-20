@@ -5,7 +5,7 @@ import numpy as np
 import tensorflow as tf
 
 # Load your pre-trained model (replace 'your_model_path' with the actual model path)
-model = tf.keras.models.load_model('your_model_path')
+model = tf.keras.models.load_model('model.h5')
 
 class SignLanguageProcessor(VideoProcessorBase):
     def __init__(self):
