@@ -169,5 +169,6 @@ RTC_CONFIGURATION = {
 webrtc_streamer(
     key="sign-language-recognition",
     video_processor_factory=VideoTransformer,
+    media_stream_constraints={"video": True, "audio": False},
     rtc_configuration=RTC_CONFIGURATION
 )
