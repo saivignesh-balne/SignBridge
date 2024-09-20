@@ -143,17 +143,24 @@ class VideoTransformer(VideoProcessorBase):
                 predicted_class = np.argmax(yhat, axis=1)
                 label = self.class_labels[predicted_class[0]]
 
+                self.last_label = label
+
+                # Speak the label
                 play_audio_thread(label, lang_code)
                 
-                self.last_label = label
                 self.start_time = None
             else:
                 label = self.last_label
         else:
             label = self.last_label
 
-        return image
+        # Overlay text on the frame
+        frame_with_text = image.copy()
+        cv2.putText(frame_with_text, f'Prediction: {label}', (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2, cv2.LINE_AA)
 
+        return frame_with_text
+
+# RTC Configuration for WebRTC
 RTC_CONFIGURATION = {
     "iceServers": [{"urls": ["stun:stun.l.google.com:19302"]}]
 }
@@ -162,5 +169,5 @@ RTC_CONFIGURATION = {
 webrtc_streamer(
     key="sign-language-recognition",
     video_processor_factory=VideoTransformer,
-    rtc_configuration = RTC_CONFIGURATION
+    rtc_configuration=RTC_CONFIGURATION
 )
