@@ -154,8 +154,13 @@ class VideoTransformer(VideoProcessorBase):
 
         return image
 
+RTC_CONFIGURATION = {
+    "iceServers": [{"urls": ["stun:stun.l.google.com:19302"]}]
+}
+
 # Initialize WebRTC streamer with the updated argument
 webrtc_streamer(
     key="sign-language-recognition",
-    video_processor_factory=VideoTransformer
+    video_processor_factory=VideoTransformer,
+    rtc_configuration = RTC_CONFIGURATION
 )
