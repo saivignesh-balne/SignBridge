@@ -10,7 +10,7 @@ import time
 model = tf.keras.models.load_model('model.h5')
 
 # Re-compile the model (optional, adjust if needed)
-model.compile(optimizer='adam', loss='sparse_categorical_crossentropy', metrics=['accuracy'])
+model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
 
 class_labels = ['hello', 'no', 'yes']
 
