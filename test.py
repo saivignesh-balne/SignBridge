@@ -7,7 +7,7 @@ import tensorflow as tf
 import time
 
 # Load the model
-model = tf.keras.models.load_model('s_model.h5')
+model = tf.keras.models.load_model('model.h5')
 class_labels = ['hello', 'no', 'yes']
 
 # Initialize MediaPipe hands
