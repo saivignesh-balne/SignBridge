@@ -7,7 +7,7 @@ import mediapipe as mp
 import time
 
 # Load the TensorFlow model
-model = tf.keras.models.load_model('s_model.h5')
+model = tf.keras.models.load_model('model.h5')
 
 # Re-compile the model (optional, adjust if needed)
 model.compile(optimizer='adam', loss='sparse_categorical_crossentropy', metrics=['accuracy'])
