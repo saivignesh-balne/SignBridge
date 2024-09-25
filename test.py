@@ -1,5 +1,5 @@
 import streamlit as st
-from streamlit_webrtc import webrtc_streamer, VideoProcessorBase, WebRtcMode
+from streamlit_webrtc import webrtc_streamer, VideoProcessorBase
 import cv2
 import numpy as np
 import tensorflow as tf
@@ -7,7 +7,7 @@ import mediapipe as mp
 import time
 
 # Load the TensorFlow model
-model = tf.keras.models.load_model('model.h5')
+model = tf.keras.models.load_model('s_model.h5')
 class_labels = ['hello', 'no', 'yes']
 
 # Initialize MediaPipe Hands
@@ -66,28 +66,27 @@ class VideoTransformer(VideoProcessorBase):
                     self.label = class_labels[predicted_class[0]]
                     self.last_update_time = current_time
 
-        # Draw the label on the frame
-        cv2.putText(rgb_frame, f'Prediction: {self.label}', (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2, cv2.LINE_AA)
+        # Convert the frame back to BGR for OpenCV drawing
+        bgr_frame = cv2.cvtColor(rgb_frame, cv2.COLOR_RGB2BGR)
         
-        return frame
+        # Draw the label on the frame
+        cv2.putText(bgr_frame, f'Prediction: {self.label}', (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2, cv2.LINE_AA)
+        
+        # Return the frame to display
+        return bgr_frame
 
 # Streamlit app
 st.title('Hand Sign Recognition')
 
 # Define the RTC configuration
 rtc_configuration = {
-    "iceServers": [
-        {"urls": "stun:stun.l.google.com:19302"},  # STUN server
-        # Uncomment and replace with your TURN server details if available
-        # {"urls": "turn:turn.example.com", "username": "user", "credential": "pass"}
-    ]
+    "iceServers": [{"urls": ["stun:stun.l.google.com:19302"]}]
 }
 
-# Create the WebRTC app with the custom video processor
+# Create the WebRTC app with the custom video processor and RTC configuration
 webrtc_streamer(
     key="example",
     video_processor_factory=VideoTransformer,
-    mode=WebRtcMode.SENDRECV,
-    rtc_configuration=rtc_configuration,
+    rtc_configuration=rtc_configuration,  # Pass the RTC configuration here
     media_stream_constraints={"video": {"facingMode": "user"}}
 )
