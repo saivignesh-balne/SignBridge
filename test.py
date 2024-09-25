@@ -1,31 +1,31 @@
 import streamlit as st
-from streamlit_webrtc import webrtc_streamer, VideoProcessorBase
+from streamlit_webrtc import webrtc_streamer, VideoProcessorBase, WebRtcMode
 import cv2
-import mediapipe as mp
 import numpy as np
 import tensorflow as tf
+import mediapipe as mp
 import time
 
-# Load the model
-model = tf.keras.models.load_model('model.h5')
+# Load the TensorFlow model
+model = tf.keras.models.load_model('s_model.h5')
 class_labels = ['hello', 'no', 'yes']
 
-# Initialize MediaPipe hands
+# Initialize MediaPipe Hands
 mp_hands = mp.solutions.hands
 
 # Define the size of the output image (256x256 pixels)
 output_size = (256, 256)
 
-# Define the VideoProcessorBase class
 class VideoTransformer(VideoProcessorBase):
     def __init__(self):
         self.label = "waiting"
         self.last_update_time = time.time()
         self.hands = mp_hands.Hands(static_image_mode=False, max_num_hands=2, min_detection_confidence=0.7)
 
-    def transform(self, frame):
+    def recv(self, frame):
         # Convert the frame to RGB (MediaPipe works with RGB)
-        rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        rgb_frame = frame.to_ndarray(format="bgr24")
+        rgb_frame = cv2.cvtColor(rgb_frame, cv2.COLOR_BGR2RGB)
         
         # Process the frame and find hand landmarks
         result = self.hands.process(rgb_frame)
@@ -33,7 +33,7 @@ class VideoTransformer(VideoProcessorBase):
         # If hands are detected, process the hand landmarks
         if result.multi_hand_landmarks:
             for hand_landmarks in result.multi_hand_landmarks:
-                img_h, img_w, _ = frame.shape
+                img_h, img_w, _ = rgb_frame.shape
                 x_coords = [lm.x * img_w for lm in hand_landmarks.landmark]
                 y_coords = [lm.y * img_h for lm in hand_landmarks.landmark]
                 
@@ -48,7 +48,7 @@ class VideoTransformer(VideoProcessorBase):
                 y_max = min(y_max + padding, img_h)
 
                 # Crop the hand region from the frame
-                hand_crop = frame[y_min:y_max, x_min:x_max]
+                hand_crop = rgb_frame[y_min:y_max, x_min:x_max]
 
                 # Resize the cropped hand image to 256x256
                 hand_resized = cv2.resize(hand_crop, output_size)
@@ -67,21 +67,27 @@ class VideoTransformer(VideoProcessorBase):
                     self.last_update_time = current_time
 
         # Draw the label on the frame
-        cv2.putText(frame, f'Prediction: {self.label}', (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2, cv2.LINE_AA)
+        cv2.putText(rgb_frame, f'Prediction: {self.label}', (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2, cv2.LINE_AA)
+        
         return frame
 
 # Streamlit app
 st.title('Hand Sign Recognition')
 
-# Create the WebRTC app with the custom video processor
-RTC_CONFIGURATION = {
-    "iceServers": [{"urls": ["stun:stun.l.google.com:19302"]}]
+# Define the RTC configuration
+rtc_configuration = {
+    "iceServers": [
+        {"urls": "stun:stun.l.google.com:19302"},  # STUN server
+        # Uncomment and replace with your TURN server details if available
+        # {"urls": "turn:turn.example.com", "username": "user", "credential": "pass"}
+    ]
 }
 
-# Initialize WebRTC streamer
+# Create the WebRTC app with the custom video processor
 webrtc_streamer(
-    key="sign-language-recognition",
+    key="example",
     video_processor_factory=VideoTransformer,
-    media_stream_constraints={"video": True, "audio": False},  # No audio from the stream
-    rtc_configuration=RTC_CONFIGURATION
+    mode=WebRtcMode.SENDRECV,
+    rtc_configuration=rtc_configuration,
+    media_stream_constraints={"video": {"facingMode": "user"}}
 )
