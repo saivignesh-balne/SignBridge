@@ -35,8 +35,8 @@ if 'cap' not in st.session_state:
     st.session_state.cap = None
 if 'model' not in st.session_state:
     try:
-        st.session_state.model = tf.keras.models.load_model('model.h5')
-        st.session_state.class_labels = ['hi', 'i love u', 'yes']
+        st.session_state.model = tf.keras.models.load_model('model.keras')
+        st.session_state.class_labels = ['hi', 'i love you', 'yes']
     except Exception as e:
         st.error(f"Error loading model: {e}")
 if 'detector' not in st.session_state:
