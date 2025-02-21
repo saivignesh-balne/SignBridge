@@ -10,7 +10,7 @@ from deep_translator import GoogleTranslator
 from io import BytesIO
 import base64
 import threading
-from streamlit_webrtc import webrtc_streamer, VideoTransformerBase, WebRtcMode
+from streamlit_webrtc import webrtc_streamer, VideoProcessorBase, WebRtcMode
 
 # Supported Indian languages with their codes for gTTS and deep-translator
 languages = {
@@ -32,7 +32,8 @@ st.title("Sign Language Recognition with Translation and Speech")
 # Initialize session state variables
 if 'model' not in st.session_state:
     try:
-        st.session_state.model = tf.keras.models.load_model('model.h5')
+        st.session_state.model = tf.keras.models.load_model('model.keras')
+        st.session_state.model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['categorical_accuracy'])
         st.session_state.class_labels = ['hi', 'i love you', 'yes']
     except Exception as e:
         st.error(f"Error loading model: {e}")
@@ -77,12 +78,12 @@ def play_audio_thread(label, lang_code):
     # Run the audio generation and playback in a separate thread
     threading.Thread(target=play_audio, args=(label, lang_code)).start()
 
-class VideoTransformer(VideoTransformerBase):
+class VideoProcessor(VideoProcessorBase):
     def __init__(self):
         self.start_time = None
         self.recognition_delay = 2  # 2 seconds delay
 
-    def transform(self, frame):
+    def recv(self, frame):
         img = frame.to_ndarray(format="bgr24")
 
         # Detect hands in the frame
@@ -163,6 +164,6 @@ class VideoTransformer(VideoTransformerBase):
         label_placeholder.text(f'Prediction: {label}')
         return img
 
-webrtc_streamer(key="example", mode=WebRtcMode.SENDRECV, video_transformer_factory=VideoTransformer)
+webrtc_streamer(key="example", mode=WebRtcMode.SENDRECV, video_processor_factory=VideoProcessor)
 
 st.text("Press 'Start Webcam' to begin capturing video and 'Stop Webcam' to stop.")
