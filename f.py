@@ -32,7 +32,7 @@ st.title("Sign Language Recognition with Translation and Speech")
 # Initialize session state variables
 if 'model' not in st.session_state:
     try:
-        st.session_state.model = tf.keras.models.load_model('model.keras')
+        st.session_state.model = tf.keras.models.load_model('model.h5')
         st.session_state.model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['categorical_accuracy'])
         st.session_state.class_labels = ['hi', 'i love you', 'yes']
     except Exception as e:
