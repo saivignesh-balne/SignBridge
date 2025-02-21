@@ -9,3 +9,4 @@ mediapipe
 streamlit-webrtc
 aioice
 av
+opencv-python
