@@ -1,18 +1,30 @@
 import streamlit as st
 import cv2
 import numpy as np
+import mediapipe as mp
 import tensorflow as tf
-from cvzone.HandTrackingModule import HandDetector
-import math
-import time
 from gtts import gTTS
 from deep_translator import GoogleTranslator
 from io import BytesIO
 import base64
-import threading
+import time
+
+# Initialize MediaPipe Hands
+mp_hands = mp.solutions.hands
+mp_drawing = mp.solutions.drawing_utils
+
+# Load the TensorFlow model
+@st.cache_resource  # Cache the model to avoid reloading on every frame
+def load_model():
+    model = tf.keras.models.load_model('model.h5')
+    model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['categorical_accuracy'])
+    return model
+
+# Class labels for predictions
+CLASS_LABELS = ['hi', 'i love you', 'yes']  # Update with your actual class labels
 
 # Supported Indian languages with their codes for gTTS and deep-translator
-languages = {
+LANGUAGES = {
     'English': 'en',
     'Hindi': 'hi',
     'Tamil': 'ta',
@@ -25,173 +37,181 @@ languages = {
     'Malayalam': 'ml'
 }
 
+# Function to generate and play audio
+def play_audio(text, lang_code):
+    try:
+        # Translate the text
+        translated_text = GoogleTranslator(source='en', target=lang_code).translate(text)
+        st.write(f"Translated Text: {translated_text}")
+
+        # Convert the translated text to speech
+        tts = gTTS(translated_text, lang=lang_code)
+        
+        # Use BytesIO to store the audio in memory
+        audio_buffer = BytesIO()
+        tts.write_to_fp(audio_buffer)
+        audio_buffer.seek(0)  # Move to the start of the BytesIO buffer
+        
+        # Get audio bytes and encode to base64 for embedding in HTML
+        audio_bytes = audio_buffer.read()
+        audio_b64 = base64.b64encode(audio_bytes).decode()
+
+        # JavaScript to play the audio
+        audio_js = f"""
+            <audio autoplay>
+                <source src="data:audio/mp3;base64,{audio_b64}" type="audio/mp3">
+            </audio>
+        """
+        st.components.v1.html(audio_js, height=0)
+    except Exception as e:
+        st.error(f"Error in play_audio: {e}")
+
+# Function to calculate the bounding box for a hand
+def get_bounding_box(hand_landmarks, img_shape):
+    img_height, img_width, _ = img_shape
+    x_min = img_width
+    y_min = img_height
+    x_max = 0
+    y_max = 0
+
+    for landmark in hand_landmarks.landmark:
+        x = int(landmark.x * img_width)
+        y = int(landmark.y * img_height)
+        x_min = min(x_min, x)
+        y_min = min(y_min, y)
+        x_max = max(x_max, x)
+        y_max = max(y_max, y)
+
+    width = x_max - x_min
+    height = y_max - y_min
+
+    return x_min, y_min, width, height
+
 # Streamlit app
 st.title("Sign Language Recognition with Translation and Speech")
 
 # Initialize session state variables
-if 'webcam_running' not in st.session_state:
-    st.session_state.webcam_running = False
-if 'cap' not in st.session_state:
-    st.session_state.cap = None
-if 'model' not in st.session_state:
-    try:
-        st.session_state.model = tf.keras.models.load_model('model.h5')
-        st.session_state.class_labels = ['hi', 'i love you', 'yes']
-    except Exception as e:
-        st.error(f"Error loading model: {e}")
-if 'detector' not in st.session_state:
-    st.session_state.detector = HandDetector(maxHands=2)
 if 'last_label' not in st.session_state:
     st.session_state.last_label = "No Hand Detected"
+if 'play_audio' not in st.session_state:
+    st.session_state.play_audio = False
+if 'video_running' not in st.session_state:
+    st.session_state.video_running = False
 
-# User input for text and language selection
-language = st.selectbox("Select a target language for speech:", list(languages.keys()))
-lang_code = languages[language]
+# Language selection
+target_language = st.selectbox("Select a target language for speech:", list(LANGUAGES.keys()))
+target_lang_code = LANGUAGES[target_language]
 
-# Buttons to control the webcam
-start_button = st.button('Start Webcam')
-stop_button = st.button('Stop Webcam')
+# Start and Stop buttons
+col1, col2 = st.columns(2)
+with col1:
+    if st.button("Start Video"):
+        st.session_state.video_running = True
+with col2:
+    if st.button("Stop Video"):
+        st.session_state.video_running = False
 
-if start_button and not st.session_state.webcam_running:
-    st.session_state.cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
-    if st.session_state.cap.isOpened():
-        st.session_state.webcam_running = True
+# Placeholder for displaying the video feed
+video_placeholder = st.empty()
+
+# Initialize MediaPipe Hands
+hands = mp_hands.Hands(
+    static_image_mode=False,
+    max_num_hands=2,
+    min_detection_confidence=0.7,
+    min_tracking_confidence=0.7
+)
+
+# Load the TensorFlow model
+model = load_model()
+
+# OpenCV video capture
+cap = cv2.VideoCapture(0)  # Use the default camera (index 0)
+
+# Check if the camera is opened successfully
+if not cap.isOpened():
+    st.error("Error: Could not open camera.")
+    st.stop()
+
+# Main loop for video processing
+while st.session_state.video_running:
+    ret, frame = cap.read()
+    if not ret:
+        st.error("Error: Failed to capture frame.")
+        break
+
+    # Convert the frame to RGB for MediaPipe
+    frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+
+    # Process the frame with MediaPipe Hands
+    results = hands.process(frame_rgb)
+
+    if results.multi_hand_landmarks:
+        # Draw hand landmarks on the frame
+        for hand_landmarks in results.multi_hand_landmarks:
+            mp_drawing.draw_landmarks(
+                frame, hand_landmarks, mp_hands.HAND_CONNECTIONS
+            )
+
+            # Get the bounding box for the hand
+            x_min, y_min, width, height = get_bounding_box(hand_landmarks, frame.shape)
+
+            # Draw the bounding box on the frame
+            cv2.rectangle(frame, (x_min, y_min), (x_min + width, y_min + height), (0, 255, 0), 2)
+
+        # Perform recognition after a delay
+        if st.session_state.get("start_time") is None:
+            st.session_state.start_time = time.time()
+
+        elapsed_time = time.time() - st.session_state.start_time
+
+        if elapsed_time >= 2:  # 2 seconds delay for recognition
+            # Get the bounding box for the hands
+            hand_landmarks = results.multi_hand_landmarks
+            if len(hand_landmarks) == 1:
+                hand = hand_landmarks[0]
+                x, y, w, h = get_bounding_box(hand, frame.shape)
+                img_crop = frame[y-20:y + h+20, x-20:x + w+20]
+            elif len(hand_landmarks) == 2:
+                hand1 = hand_landmarks[0]
+                hand2 = hand_landmarks[1]
+                x1, y1, w1, h1 = get_bounding_box(hand1, frame.shape)
+                x2, y2, w2, h2 = get_bounding_box(hand2, frame.shape)
+                x_min = min(x1, x2)
+                y_min = min(y1, y2)
+                x_max = max(x1 + w1, x2 + w2)
+                y_max = max(y1 + h1, y2 + h2)
+                img_crop = frame[y_min-20:y_max+20, x_min-20:x_max+20]
+
+            # Preprocess the image for the model
+            img_resized = cv2.resize(img_crop, (256, 256))
+            img_normalized = img_resized.astype(np.float32) / 255.0
+            img_input = np.expand_dims(img_normalized, axis=0)
+
+            # Make a prediction
+            predictions = model.predict(img_input)
+            predicted_class = np.argmax(predictions, axis=1)
+            label = CLASS_LABELS[predicted_class[0]]
+
+            # Update the last label
+            st.session_state.last_label = label
+
+            # Play audio for the predicted label
+            play_audio(label, target_lang_code)
+
+            # Reset the timer
+            st.session_state.start_time = None
     else:
-        st.error("Failed to open webcam")
+        # No hands detected
+        st.session_state.last_label = "No Hand Detected"
 
-if stop_button and st.session_state.webcam_running:
-    if st.session_state.cap:
-        st.session_state.cap.release()
-        st.session_state.cap = None
-    st.session_state.webcam_running = False
+    # Display the prediction on the frame
+    cv2.putText(frame, f"Prediction: {st.session_state.last_label}", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
 
-# Display for webcam feed and prediction
-frame_placeholder = st.empty()
-label_placeholder = st.empty()
+    # Display the frame in the Streamlit app
+    video_placeholder.image(frame, channels="BGR", use_column_width=True)
 
-def play_audio(text, lang_code):
-    # Translate the text
-    translated_text = GoogleTranslator(source='en', target=lang_code).translate(text)
-    st.write(f"Translated Text: {translated_text}")
-    
-    # Convert the translated text to speech
-    tts = gTTS(translated_text, lang=lang_code)
-    
-    # Use BytesIO to store the audio in memory
-    audio_buffer = BytesIO()
-    tts.write_to_fp(audio_buffer)
-    audio_buffer.seek(0)  # Move to the start of the BytesIO buffer
-    
-    # Get audio bytes and encode to base64 for embedding in HTML
-    audio_bytes = audio_buffer.read()
-    audio_b64 = base64.b64encode(audio_bytes).decode()
-    audio_html = f"""
-        <audio autoplay>
-            <source src="data:audio/mp3;base64,{audio_b64}" type="audio/mp3">
-        </audio>
-    """
-    
-    # Render the HTML audio player with autoplay
-    st.components.v1.html(audio_html, height=0)
-    
-def play_audio_thread(label, lang_code):
-    # Run the audio generation and playback in a separate thread
-    threading.Thread(target=play_audio, args=(label, lang_code)).start()
-
-if st.session_state.webcam_running:
-    # Timer variables for sign recognition delay
-    start_time = None
-    recognition_delay = 2  # 2 seconds delay
-
-    while st.session_state.webcam_running:
-        ret, frame = st.session_state.cap.read()
-        
-        if not ret:
-            st.error("Failed to grab frame")
-            st.session_state.webcam_running = False
-            break
-
-        # Detect hands in the frame
-        hands, img = st.session_state.detector.findHands(frame)
-
-        if hands:
-            if start_time is None:
-                start_time = time.time()  # Start the timer
-            
-            elapsed_time = time.time() - start_time
-
-            if elapsed_time >= recognition_delay:
-                if len(hands) == 1:
-                    # If only one hand is detected, use its bbox
-                    x, y, w, h = hands[0]['bbox']
-                    imgCrop = frame[y-20:y + h+20, x-20:x + w+20]
-                    w_combined = w
-                    h_combined = h
-
-                elif len(hands) == 2:
-                    # If two hands are detected, get bounding boxes of both hands
-                    x1, y1, w1, h1 = hands[0]['bbox']
-                    x2, y2, w2, h2 = hands[1]['bbox']
-
-                    # Find the coordinates for the bounding box that includes both hands
-                    x_min = min(x1, x2)
-                    y_min = min(y1, y2)
-                    x_max = max(x1 + w1, x2 + w2)
-                    y_max = max(y1 + h1, y2 + h2)
-                    w_combined = x_max - x_min
-                    h_combined = y_max - y_min
-
-                    # Crop the area containing both hands
-                    imgCrop = frame[y_min-20:y_max+20, x_min-20:x_max+20]
-
-                # Create a blank background
-                bg = np.ones((300, 300, 3), np.uint8) * 255
-
-                # Calculate aspect ratio and resize the cropped image
-                aspectRatio = h_combined / w_combined
-                if aspectRatio > 1:
-                    k = 300 / h_combined
-                    wCal = math.ceil(k * w_combined)
-                    imgResize = cv2.resize(imgCrop, (wCal, 300))
-                    wGap = math.ceil((300 - wCal) / 2)
-                    bg[:, wGap:wCal + wGap] = imgResize
-                else:
-                    k = 300 / w_combined
-                    hCal = math.ceil(k * h_combined)
-                    imgResize = cv2.resize(imgCrop, (300, hCal))
-                    hGap = math.ceil((300 - hCal) / 2)
-                    bg[hGap:hCal + hGap, :] = imgResize
-
-                # Preprocess the image for the model
-                img_preprocessed = cv2.resize(bg, (256, 256))
-                img_preprocessed = img_preprocessed.astype(np.float32) / 255.0
-                img_preprocessed = np.expand_dims(img_preprocessed, axis=0)
-
-                # Make predictions
-                yhat = st.session_state.model.predict(img_preprocessed)
-                predicted_class = np.argmax(yhat, axis=1)
-                label = st.session_state.class_labels[predicted_class[0]]
-
-                # Speak the label
-                play_audio(label, lang_code)
-                
-                st.session_state.last_label = label
-                
-                # Reset the timer after prediction
-                start_time = None
-            else:
-                label = st.session_state.last_label
-        else:
-            # Reset the timer if no hand is detected
-            label = st.session_state.last_label
-
-        # Update the Streamlit display
-        frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-        frame_placeholder.image(frame_rgb, channels="RGB")
-        label_placeholder.text(f'Prediction: {label}')
-else:
-    if st.session_state.cap:
-        st.session_state.cap.release()
-        st.session_state.cap = None
-
-st.text("Press 'Start Webcam' to begin capturing video and 'Stop Webcam' to stop.")
+# Release the camera when the video is stopped
+if not st.session_state.video_running:
+    cap.release()
+    st.write("Video feed stopped.")
