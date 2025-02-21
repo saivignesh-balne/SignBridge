@@ -10,7 +10,6 @@ from deep_translator import GoogleTranslator
 from io import BytesIO
 import base64
 import threading
-from streamlit_webrtc import webrtc_streamer, VideoProcessorBase, WebRtcMode
 
 # Supported Indian languages with their codes for gTTS and deep-translator
 languages = {
@@ -30,10 +29,13 @@ languages = {
 st.title("Sign Language Recognition with Translation and Speech")
 
 # Initialize session state variables
+if 'webcam_running' not in st.session_state:
+    st.session_state.webcam_running = False
+if 'cap' not in st.session_state:
+    st.session_state.cap = None
 if 'model' not in st.session_state:
     try:
         st.session_state.model = tf.keras.models.load_model('model.h5')
-        st.session_state.model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['categorical_accuracy'])
         st.session_state.class_labels = ['hi', 'i love you', 'yes']
     except Exception as e:
         st.error(f"Error loading model: {e}")
@@ -46,7 +48,25 @@ if 'last_label' not in st.session_state:
 language = st.selectbox("Select a target language for speech:", list(languages.keys()))
 lang_code = languages[language]
 
+# Buttons to control the webcam
+start_button = st.button('Start Webcam')
+stop_button = st.button('Stop Webcam')
+
+if start_button and not st.session_state.webcam_running:
+    st.session_state.cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
+    if st.session_state.cap.isOpened():
+        st.session_state.webcam_running = True
+    else:
+        st.error("Failed to open webcam")
+
+if stop_button and st.session_state.webcam_running:
+    if st.session_state.cap:
+        st.session_state.cap.release()
+        st.session_state.cap = None
+    st.session_state.webcam_running = False
+
 # Display for webcam feed and prediction
+frame_placeholder = st.empty()
 label_placeholder = st.empty()
 
 def play_audio(text, lang_code):
@@ -78,28 +98,33 @@ def play_audio_thread(label, lang_code):
     # Run the audio generation and playback in a separate thread
     threading.Thread(target=play_audio, args=(label, lang_code)).start()
 
-class VideoProcessor(VideoProcessorBase):
-    def __init__(self):
-        self.start_time = None
-        self.recognition_delay = 2  # 2 seconds delay
+if st.session_state.webcam_running:
+    # Timer variables for sign recognition delay
+    start_time = None
+    recognition_delay = 2  # 2 seconds delay
 
-    def recv(self, frame):
-        img = frame.to_ndarray(format="bgr24")
+    while st.session_state.webcam_running:
+        ret, frame = st.session_state.cap.read()
+        
+        if not ret:
+            st.error("Failed to grab frame")
+            st.session_state.webcam_running = False
+            break
 
         # Detect hands in the frame
-        hands, img = st.session_state.detector.findHands(img)
+        hands, img = st.session_state.detector.findHands(frame)
 
         if hands:
-            if self.start_time is None:
-                self.start_time = time.time()  # Start the timer
+            if start_time is None:
+                start_time = time.time()  # Start the timer
             
-            elapsed_time = time.time() - self.start_time
+            elapsed_time = time.time() - start_time
 
-            if elapsed_time >= self.recognition_delay:
+            if elapsed_time >= recognition_delay:
                 if len(hands) == 1:
                     # If only one hand is detected, use its bbox
                     x, y, w, h = hands[0]['bbox']
-                    imgCrop = img[y-20:y + h+20, x-20:x + w+20]
+                    imgCrop = frame[y-20:y + h+20, x-20:x + w+20]
                     w_combined = w
                     h_combined = h
 
@@ -117,7 +142,7 @@ class VideoProcessor(VideoProcessorBase):
                     h_combined = y_max - y_min
 
                     # Crop the area containing both hands
-                    imgCrop = img[y_min-20:y_max+20, x_min-20:x_max+20]
+                    imgCrop = frame[y_min-20:y_max+20, x_min-20:x_max+20]
 
                 # Create a blank background
                 bg = np.ones((300, 300, 3), np.uint8) * 255
@@ -148,12 +173,12 @@ class VideoProcessor(VideoProcessorBase):
                 label = st.session_state.class_labels[predicted_class[0]]
 
                 # Speak the label
-                play_audio_thread(label, lang_code)
+                play_audio(label, lang_code)
                 
                 st.session_state.last_label = label
                 
                 # Reset the timer after prediction
-                self.start_time = None
+                start_time = None
             else:
                 label = st.session_state.last_label
         else:
@@ -161,9 +186,12 @@ class VideoProcessor(VideoProcessorBase):
             label = st.session_state.last_label
 
         # Update the Streamlit display
+        frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        frame_placeholder.image(frame_rgb, channels="RGB")
         label_placeholder.text(f'Prediction: {label}')
-        return img
-
-webrtc_streamer(key="example", mode=WebRtcMode.SENDRECV, video_processor_factory=VideoProcessor)
+else:
+    if st.session_state.cap:
+        st.session_state.cap.release()
+        st.session_state.cap = None
 
 st.text("Press 'Start Webcam' to begin capturing video and 'Stop Webcam' to stop.")
