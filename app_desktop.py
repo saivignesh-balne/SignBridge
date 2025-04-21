@@ -31,7 +31,7 @@ languages = {
 
 # Load the model and initialize variables
 try:
-    model = tf.keras.models.load_model('Data/model.h5')
+    model = tf.keras.models.load_model('model.h5')
     class_labels = ['hi', 'i love u', 'yes']
 except Exception as e:
     print(f"Error loading model: {e}")
