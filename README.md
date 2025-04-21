@@ -40,12 +40,10 @@
 ## **Usage**  
 1. **Run the application**:  
    ```bash  
-   python app.py  # or streamlit run app.py (adjust as per your setup)  
+   streamlit run app.py (adjust as per your app)  
    ```  
 2. **Allow camera access** and perform signs in view.  
 3. **View translations** as text or hear speech output.  
-
-*(Tip: Add a short GIF/video demo under this section!)*  
 
 ---
 
@@ -65,12 +63,6 @@ SPEECH_ENABLED=True       # Toggle text-to-speech
 
 ---
 
-## **Export & Integration**  
-- **Save translations** as `.txt` or `.csv` (if applicable).  
-- API-ready for integration with other apps *(mention if supported)*.  
-
----
-
 ## **Development**  
 To contribute:  
 1. Fork the repo.  
@@ -83,12 +75,7 @@ To contribute:
 
 ## **Troubleshooting**  
 - **Camera not working**: Ensure permissions are granted.  
-- **Model inaccuracies**: Retrain with more diverse data (if applicable).  
-
----
-
-## **License**  
-[MIT](https://choosealicense.com/licenses/mit/)  
+- **Model inaccuracies**: Retrain with more diverse data.  
 
 ---
 
@@ -96,13 +83,4 @@ To contribute:
 Built with:  
 - OpenCV/MediaPipe for hand tracking.  
 - TensorFlow/Keras for gesture classification.  
-- Flask/Streamlit for the UI *(adjust as needed)*.  
-
----
-
-### **How to Improve Further**  
-1. Add a **demo GIF** under *Usage*.  
-2. List **supported sign languages** (e.g., ASL, ISL).  
-3. Include a **"Roadmap"** section for future features.  
-
-Let me know if you'd like any refinements! 🚀
+- Streamlit for the UI.  
