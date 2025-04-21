@@ -6,7 +6,7 @@ numpy
 gtts
 deep-translator
 mediapipe
-streamlit-webrtc
+pygame
 aioice
 av
 opencv-python
